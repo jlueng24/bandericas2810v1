@@ -1063,20 +1063,23 @@ if (tab === 'achievements') {
     return;
   }
   const achMap = getAchievements();
-  loadAchCatalog().then(cat=>{
-    $('#statsContent').innerHTML = ids.map(id=>{
-      const meta = cat[id];
-      const name = meta?.name ?? id;
-      const desc = meta?.desc ?? '';
-      const dt = achMap[id]?.date ? new Date(achMap[id].date).toLocaleString('es-ES') : '';
-      return `<div class="rounded-xl border p-3 bg-emerald-50/50 mb-2">
-        <div class="font-bold">🏅 ${name}</div>
-        <div class="text-xs text-slate-600">${desc}</div>
-        <div class="text-[11px] text-slate-500 mt-1">${dt}</div>
-      </div>`;
-    }).join('');
-  });
-  return;
+let __achCatalogCache = null;
+async function loadAchCatalog(){
+  if (__achCatalogCache) return __achCatalogCache;
+  try{
+    const res = await fetch('./achievements.json', { cache:'no-store' });
+    const data = await res.json();
+    const map = {};
+    const raw = Array.isArray(data.logros) ? data.logros : [];
+    raw.forEach(r=>{
+      const id = String(r['ID']||'').trim();
+      if (!id) return;
+      map[id] = { name: String(r['Nombre']||id).trim() };
+    });
+    __achCatalogCache = map;
+    return map;
+  }catch(e){ return {}; }
+}
 }
 }
 
