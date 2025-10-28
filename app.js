@@ -458,17 +458,24 @@ function hasAchievement(id){ const a=getAchievements(); return !!a[id]; }
 function unlockIfPresent(id){ try{ unlockAchievement(id); }catch(e){} }
 function tryUnlockFirstTheme(theme){
   let __achCatalogCache = null;
+let __achCatalogCache = null;
 async function loadAchCatalog(){
   if (__achCatalogCache) return __achCatalogCache;
   try{
     const res = await fetch('./achievements.json', { cache:'no-store' });
     const data = await res.json();
     const map = {};
-    (data.achievements||[]).forEach(a=>{ map[a.id]=a; });
+    const raw = Array.isArray(data.logros) ? data.logros : [];
+    raw.forEach(r=>{
+      const id = String(r['ID']||'').trim();
+      if (!id) return;
+      map[id] = { name: String(r['Nombre']||id).trim() };
+    });
     __achCatalogCache = map;
     return map;
   }catch(e){ return {}; }
 }
+
 
 async function renderFinalAchievementChips(listEl){
   try{
@@ -1222,11 +1229,10 @@ ui.albumSearch?.addEventListener('input', ()=> renderAlbum(albumActiveRegion));
 // Logros (botón header) — compat vitrina nueva / modal antiguo
 ui.btnAchievements?.addEventListener('click', ()=>{
   if (typeof window.renderAchievements === 'function') {
-    window.renderAchievements(); // la vitrina crea/abre su overlay
+    window.renderAchievements(); // vitrina/overlay moderno
   } else {
-    // Fallback: muestra la sección inline si existiera
     const s = document.getElementById('achievementsSection');
-    if (s) s.classList.remove('hidden');
+    if (s) s.classList.remove('hidden'); // fallback
   }
 });
 $('#closeAch')?.addEventListener('click', ()=> ui.achModal?.close?.());
