@@ -23,24 +23,26 @@ async function loadCatalog() {
   try {
     const res = await fetch('./achievements.json', { cache: 'no-store' });
     const data = await res.json();
+
+    // Lee TU Excel: data.logros (claves con acentos y espacios)
     const raw = Array.isArray(data.logros) ? data.logros : [];
 
     const on = v => String(v || '').trim();
     const isYes = v => on(v).toLowerCase().startsWith('s'); // “Sí/si/SI…”
 
+    // Filtra por "Activo (Sí/No)" = Sí y mapea a la forma interna
     const list = raw
-      .filter(r => isYes(r['Activo (Sí/No)'])) // solo Activo = Sí
+      .filter(r => isYes(r['Activo (Sí/No)']))
       .map(r => {
         const id   = on(r['ID']);
         const name = on(r['Nombre']) || id;
         const desc = on(r['Descripción']);
         const category = on(r['Categoría']) || 'General';
-        const idea = on(r['Idea visual']);
-        const illo = on(r['Ilustración (ruta o enlace)']);
-        // tier inferido rápido (si quieres luego lo afinamos por categorías):
+        const idea = on(r['Idea visual']);                    // emoji o URL
+        const illo = on(r['Ilustración (ruta o enlace)']);    // URL
+        const icon = idea || illo; // Usaremos lo que haya
+        // tier básico (si más tarde quieres rarezas, lo afinamos)
         const tier = (category === 'Modos' || category === 'Velocidad') ? 'plata' : 'bronce';
-        const icon = idea || illo; // emoji o URL
-
         return { id, name, desc, category, tier, icon };
       });
 
