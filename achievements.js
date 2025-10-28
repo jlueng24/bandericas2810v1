@@ -9,25 +9,41 @@
   const $$ = s => Array.from(document.querySelectorAll(s));
 
 const catEmoji = {
-  Progreso:'📈', Modos:'🎮', Velocidad:'⚡',
-  Rachas:'🔥', 'Reto del día':'📆', Supervivencia:'💀',
+'Progreso': '📈', 'Modos': '🎮', 'Velocidad': '⚡', 'Rachas': '🔥',
+'Reto del día':'📆', Supervivencia:'💀',
   Dificultad:'🥵', Colección:'🗂️', Exploración:'🧭', General:'🏅'
 };
   const tierBg = { 'oro': 'bg-amber-100', 'plata': 'bg-slate-100', 'bronce': 'bg-emerald-50' };
 
   function lsGet(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { } }
-
 async function loadCatalog() {
+  const cached = lsGet(LS.achCatalog, null);
+  if (cached && Array.isArray(cached)) return cached;
   try {
     const res = await fetch('./achievements.json', { cache: 'no-store' });
     const data = await res.json();
-    const raw = Array.isArray(data.achievements) ? data.achievements : [];
-    const seen = new Set();
+    const raw = Array.isArray(data.logros) ? data.logros : [];
+
+    const on = v => String(v || '').trim();
+    const isYes = v => on(v).toLowerCase().startsWith('s'); // “Sí/si/SI…”
+
     const list = raw
-      .filter(a => a && typeof a.id === 'string' && a.id !== 'ID') // quita cabecera
-      .filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; }) // sin duplicados
-      .map(a => ({ ...a, tier: (['oro','plata','bronce'].includes(a.tier) ? a.tier : 'bronce') }));
+      .filter(r => isYes(r['Activo (Sí/No)'])) // solo Activo = Sí
+      .map(r => {
+        const id   = on(r['ID']);
+        const name = on(r['Nombre']) || id;
+        const desc = on(r['Descripción']);
+        const category = on(r['Categoría']) || 'General';
+        const idea = on(r['Idea visual']);
+        const illo = on(r['Ilustración (ruta o enlace)']);
+        // tier inferido rápido (si quieres luego lo afinamos por categorías):
+        const tier = (category === 'Modos' || category === 'Velocidad') ? 'plata' : 'bronce';
+        const icon = idea || illo; // emoji o URL
+
+        return { id, name, desc, category, tier, icon };
+      });
+
     lsSet(LS.achCatalog, list);
     return list;
   } catch (e) {
